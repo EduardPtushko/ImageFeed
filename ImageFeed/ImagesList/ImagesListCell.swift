@@ -7,15 +7,27 @@
 
 import UIKit
 
-class ImagesListCell: UITableViewCell {
+final class ImagesListCell: UITableViewCell {
 
     // MARK: - IBOutlets
 
-    @IBOutlet var dateLabel: UILabel!
-    @IBOutlet var cellButton: UIButton!
-    @IBOutlet var cellImageView: UIImageView!
+    @IBOutlet private weak var dateLabel: UILabel!
+    @IBOutlet private weak var cellButton: UIButton!
+    @IBOutlet private weak var cellImageView: UIImageView!
 
     // MARK: - Static Properties
 
     static let reuseIdentifier = "ImagesListCell"
+
+    // MARK: - Methods
+
+    func configure(image: UIImage?, date: String, isLiked: Bool) {
+        cellImageView.image = image
+        dateLabel.text = date
+
+        let likeImage =
+            isLiked
+            ? UIImage(resource: .active) : UIImage(resource: .noActive)
+        cellButton.setImage(likeImage, for: .normal)
+    }
 }

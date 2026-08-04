@@ -24,12 +24,14 @@ class ImagesListViewController: UIViewController {
         return formatter
     }()
 
+    private let rowHight: CGFloat = 200
+
     // MARK: - Lifecycle
 
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        tableView.rowHeight = 200
+        tableView.rowHeight = rowHight
         tableView.contentInset = UIEdgeInsets(
             top: 12,
             left: 0,
@@ -43,14 +45,12 @@ class ImagesListViewController: UIViewController {
 
 extension ImagesListViewController: UITableViewDataSource {
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int)
-        -> Int
-    {
+        -> Int {
         photosName.count
     }
 
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath)
-        -> UITableViewCell
-    {
+        -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(
             withIdentifier: ImagesListCell.reuseIdentifier,
             for: indexPath
@@ -60,7 +60,11 @@ extension ImagesListViewController: UITableViewDataSource {
             return UITableViewCell()
         }
 
-        configCell(for: imageListCell, with: indexPath)
+        imageListCell.configure(
+            image: UIImage(named: photosName[indexPath.row]),
+            date: dateFormatter.string(from: Date()),
+            isLiked: indexPath.row % 2 == 0
+        )
 
         return imageListCell
     }
@@ -83,6 +87,7 @@ extension ImagesListViewController: UITableViewDelegate {
         guard let image = UIImage(named: photosName[indexPath.row]) else {
             return 0
         }
+        guard image.size.width > 0 else { return 0 }
 
         let imageInsets = UIEdgeInsets(top: 4, left: 16, bottom: 4, right: 16)
         let imageViewWidth =
@@ -92,24 +97,5 @@ extension ImagesListViewController: UITableViewDelegate {
         let cellHeight =
             image.size.height * scale + imageInsets.top + imageInsets.bottom
         return cellHeight
-    }
-}
-
-// MARK: - Private Methods
-
-extension ImagesListViewController {
-    private func configCell(for cell: ImagesListCell, with indexPath: IndexPath)
-    {
-        guard let image = UIImage(named: photosName[indexPath.row]) else {
-            return
-        }
-
-        cell.cellImageView.image = image
-        cell.dateLabel.text = dateFormatter.string(from: Date())
-
-        let likeImage =
-            indexPath.row % 2 == 0
-            ? UIImage(resource: .noActive) : UIImage(resource: .active)
-        cell.cellButton.setImage(likeImage, for: .normal)
     }
 }
