@@ -14,6 +14,7 @@ final class ImagesListCell: UITableViewCell {
     @IBOutlet private weak var dateLabel: UILabel!
     @IBOutlet private weak var cellButton: UIButton!
     @IBOutlet private weak var cellImageView: UIImageView!
+    @IBOutlet private weak var gradient: GradientView!
 
     // MARK: - Static Properties
 
@@ -29,5 +30,8 @@ final class ImagesListCell: UITableViewCell {
             isLiked
             ? UIImage(resource: .active) : UIImage(resource: .noActive)
         cellButton.setImage(likeImage, for: .normal)
+        
+        gradient.setColors([.gradientStart, .gradientEnd])
     }
 }
+
