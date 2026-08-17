@@ -28,7 +28,7 @@ final class ImagesListCell: UITableViewCell {
 
         let likeImage =
             isLiked
-            ? UIImage(resource: .active) : UIImage(resource: .noActive)
+        ? UIImage(resource: .likeButtonOn) : UIImage(resource: .likeButtonOff)
         cellButton.setImage(likeImage, for: .normal)
         
         gradient.setColors([.gradientStart, .gradientEnd])

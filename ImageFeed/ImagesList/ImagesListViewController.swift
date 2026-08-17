@@ -11,7 +11,7 @@ class ImagesListViewController: UIViewController {
 
     // MARK: - IBOutlets
 
-    @IBOutlet private var tableView: UITableView!
+    @IBOutlet private weak var tableView: UITableView!
 
     // MARK: - Properties
 
@@ -25,6 +25,7 @@ class ImagesListViewController: UIViewController {
     }()
 
     private let rowHight: CGFloat = 200
+    private let showSingleImageSegueIdentifier = "ShowSingleImage"
 
     // MARK: - Lifecycle
 
@@ -39,18 +40,39 @@ class ImagesListViewController: UIViewController {
             right: 0
         )
     }
+
+    // MARK: - Navigation
+
+    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
+        if segue.identifier == showSingleImageSegueIdentifier {
+            guard
+                let viewController = segue.destination
+                    as? SingleImageViewController,
+                let indexPath = sender as? IndexPath
+            else {
+                assertionFailure("Invalid segue destination")
+                return
+            }
+            let image = UIImage(named: photosName[indexPath.row])
+            viewController.image = image
+        } else {
+            super.prepare(for: segue, sender: sender)
+        }
+    }
 }
 
 // MARK: - UITableViewDataSource
 
 extension ImagesListViewController: UITableViewDataSource {
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int)
-        -> Int {
+        -> Int
+    {
         photosName.count
     }
 
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath)
-        -> UITableViewCell {
+        -> UITableViewCell
+    {
         let cell = tableView.dequeueReusableCell(
             withIdentifier: ImagesListCell.reuseIdentifier,
             for: indexPath
@@ -77,7 +99,10 @@ extension ImagesListViewController: UITableViewDelegate {
         _ tableView: UITableView,
         didSelectRowAt indexPath: IndexPath
     ) {
-        print("tap")
+        performSegue(
+            withIdentifier: showSingleImageSegueIdentifier,
+            sender: indexPath
+        )
     }
 
     func tableView(
