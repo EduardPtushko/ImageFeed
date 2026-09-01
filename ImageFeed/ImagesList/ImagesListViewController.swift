@@ -24,7 +24,6 @@ class ImagesListViewController: UIViewController {
         return formatter
     }()
 
-    private let rowHight: CGFloat = 200
     private let showSingleImageSegueIdentifier = "ShowSingleImage"
 
     // MARK: - Lifecycle
@@ -32,7 +31,6 @@ class ImagesListViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        tableView.rowHeight = rowHight
         tableView.contentInset = UIEdgeInsets(
             top: 12,
             left: 0,
