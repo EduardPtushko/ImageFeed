@@ -15,7 +15,7 @@ class GradientView: UIView {
     }
 
     var gradientLayer: CAGradientLayer {
-        return layer as! CAGradientLayer
+        return (layer as? CAGradientLayer) ?? CAGradientLayer()
     }
 
     @IBInspectable var startColor: UIColor? {
