@@ -13,11 +13,14 @@ final class OAuth2Service {
 
     private init() {}
 
-    func fetchOAthToken(
+    func fetchOAuthToken(
         _ code: String,
         completion: @escaping (Result<String, Error>) -> Void
     ) {
-        guard let request = makeOAuthTokenRequest(code: code) else { return }
+        guard let request = makeOAuthTokenRequest(code: code) else {
+            print("Failed to create OAuthTokenRequest")
+            return
+        }
 
         let task = URLSession.shared.data(for: request) { [weak self] result in
             guard let self else { return }
@@ -53,6 +56,7 @@ final class OAuth2Service {
                 string: Constants.URL.token
             )
         else {
+            print("Failed to create URLComponents")
             return nil
         }
 
@@ -64,7 +68,10 @@ final class OAuth2Service {
             URLQueryItem(name: "grant_type", value: "authorization_code"),
         ]
 
-        guard let url = urlComponents.url else { return nil }
+        guard let url = urlComponents.url else {
+            print("Failed to create URL")
+            return nil
+        }
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"

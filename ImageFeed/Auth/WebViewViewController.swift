@@ -81,6 +81,7 @@ final class WebViewViewController: UIViewController {
                 string: Constants.URL.authorize
             )
         else {
+            print("Failed to create URLComponents")
             return
         }
 
@@ -91,7 +92,10 @@ final class WebViewViewController: UIViewController {
             URLQueryItem(name: "scope", value: Constants.accessScope),
         ]
 
-        guard let url = urlComponents.url else { return }
+        guard let url = urlComponents.url else {
+            print("Failed to create URL")
+            return
+        }
 
         let request = URLRequest(url: url)
         webView.load(request)
