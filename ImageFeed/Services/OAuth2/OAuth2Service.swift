@@ -7,9 +7,16 @@
 
 import Foundation
 
+enum AuthServiceError: Error {
+    case invalidRequest
+}
+
 final class OAuth2Service {
     static let shared = OAuth2Service()
     private let oauthTokenStorage = OAuth2TokenStorage()
+    private let urlSession = URLSession.shared
+    private var task: URLSessionTask?
+    private var lastCode: String?
 
     private init() {}
 
@@ -17,36 +24,52 @@ final class OAuth2Service {
         _ code: String,
         completion: @escaping (Result<String, Error>) -> Void
     ) {
+        assert(Thread.isMainThread)
+
+        guard lastCode != code else {
+            completion(.failure(AuthServiceError.invalidRequest))
+            return
+        }
+
+        task?.cancel()
+        lastCode = code
+
         guard let request = makeOAuthTokenRequest(code: code) else {
             print("Failed to create OAuthTokenRequest")
+            completion(.failure(AuthServiceError.invalidRequest))
             return
         }
 
         let task = URLSession.shared.data(for: request) { [weak self] result in
             guard let self else { return }
 
-            switch result {
-            case .success(let data):
-                do {
-                    let decoder = JSONDecoder()
-                    let accessToken = try decoder.decode(
-                        OAuthTokenResponseBody.self,
-                        from: data
-                    ).accessToken
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let data):
+                    do {
+                        let decoder = JSONDecoder()
+                        let accessToken = try decoder.decode(
+                            OAuthTokenResponseBody.self,
+                            from: data
+                        ).accessToken
 
-                    self.oauthTokenStorage.token = accessToken
-                    completion(.success(accessToken))
-                } catch {
+                        self.oauthTokenStorage.token = accessToken
+                        completion(.success(accessToken))
+                    } catch {
+                        print(error.localizedDescription)
+                        completion(.failure(NetworkError.decodingError(error)))
+                    }
+
+                case .failure(let error):
                     print(error.localizedDescription)
-                    completion(.failure(NetworkError.decodingError(error)))
+                    completion(.failure(error))
                 }
-
-            case .failure(let error):
-                print(error.localizedDescription)
-                completion(.failure(error))
+                self.task = nil
+                self.lastCode = nil
             }
         }
 
+        self.task = task
         task.resume()
     }
 
@@ -57,6 +80,7 @@ final class OAuth2Service {
             )
         else {
             print("Failed to create URLComponents")
+            assertionFailure("Failed to create URLComponents")
             return nil
         }
 

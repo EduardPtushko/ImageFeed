@@ -8,6 +8,8 @@
 import UIKit
 
 final class ProfileViewController: UIViewController {
+    
+    private let profileService = ProfileService.shared
 
     // MARK: - UI Elements
 
@@ -65,6 +67,15 @@ final class ProfileViewController: UIViewController {
 
         setupUI()
         setupConstraints()
+         
+        guard let profile = profileService.profile else { return }
+        updateProfileDetails(with: profile)
+    }
+    
+    private func updateProfileDetails(with profile: Profile) {
+        nameLabel.text =  profile.name.isEmpty ? "Имя не указано" : profile.name
+        loginNameLabel.text = profile.loginName.isEmpty ? "@неизвестный пользователь" : profile.loginName
+        descriptionLabel.text = (profile.bio?.isEmpty ?? true) ? "Профиль не заполнен" : profile.bio
     }
 
     // MARK: - Setup Methods

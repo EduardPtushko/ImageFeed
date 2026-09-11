@@ -6,6 +6,7 @@
 //
 
 import UIKit
+import ProgressHUD
 
 // MARK: - AuthViewControllerDelegate
 
@@ -66,7 +67,11 @@ extension AuthViewController: WebViewViewControllerDelegate {
         _ vc: WebViewViewController,
         didAuthenticateWithCode code: String
     ) {
+        UIBlockingProgressHUD.show()
+        
         oauth2Service.fetchOAuthToken(code) { [weak self] result in
+            UIBlockingProgressHUD.dismiss()
+            
             guard let self else { return }
 
             switch result {

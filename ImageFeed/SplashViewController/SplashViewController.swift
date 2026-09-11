@@ -13,6 +13,7 @@ final class SplashViewController: UIViewController {
     private let showAuthenticationScreenSegueIdentifier =
         "ShowAuthenticationScreen"
     private let storage = OAuth2TokenStorage()
+    private let profileService = ProfileService.shared
 
     override var preferredStatusBarStyle: UIStatusBarStyle {
         .lightContent
@@ -21,8 +22,8 @@ final class SplashViewController: UIViewController {
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
 
-        if storage.token != nil {
-            switchToTabBarController()
+        if let token = storage.token {
+            fetchProfile(token: token)
         } else {
             performSegue(
                 withIdentifier: showAuthenticationScreenSegueIdentifier,
@@ -40,7 +41,8 @@ final class SplashViewController: UIViewController {
         guard
             let window = UIApplication.shared.connectedScenes
                 .compactMap({ $0 as? UIWindowScene })
-                .filter({ $0.activationState == .foregroundActive }).first?.keyWindow
+                .filter({ $0.activationState == .foregroundActive }).first?
+                .keyWindow
         else {
             assertionFailure("Invalid window configuration")
             return
@@ -51,6 +53,22 @@ final class SplashViewController: UIViewController {
                 identifier: "TabBarViewController"
             )
         window.rootViewController = tabBarController
+    }
+
+    private func fetchProfile(token: String) {
+        UIBlockingProgressHUD.show()
+        profileService.fetchProfile(token) { [weak self] result in
+            UIBlockingProgressHUD.dismiss()
+
+            guard let self else { return }
+
+            switch result {
+            case .success:
+                self.switchToTabBarController()
+            case .failure(let error):
+                print(error.localizedDescription)
+            }
+        }
     }
 }
 
@@ -82,7 +100,10 @@ extension SplashViewController {
 extension SplashViewController: AuthViewControllerDelegate {
     func didAuthenticate(_ vc: AuthViewController) {
         vc.dismiss(animated: true) { [weak self] in
+
             self?.switchToTabBarController()
+
         }
     }
+
 }
