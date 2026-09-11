@@ -10,6 +10,7 @@ import UIKit
 final class ProfileViewController: UIViewController {
     
     private let profileService = ProfileService.shared
+    private var profileImageServiceObserver: NSObjectProtocol?
 
     // MARK: - UI Elements
 
@@ -70,13 +71,33 @@ final class ProfileViewController: UIViewController {
          
         guard let profile = profileService.profile else { return }
         updateProfileDetails(with: profile)
+        
+        profileImageServiceObserver = NotificationCenter.default
+            .addObserver(forName: ProfileImageService.didChangeNotification, object: nil, queue: .main) { [weak self] _ in
+                guard let self  else { return }
+                self.updateAvatar()
+            }
+        updateAvatar()
     }
+    
+    private func updateAvatar() {
+        guard let profileImageURL = ProfileImageService.shared.avatarURL,
+           let url  = URL(string: profileImageURL) else {
+            return
+        }
+        
+        //TODO: Update avatar
+    }
+    
+   
     
     private func updateProfileDetails(with profile: Profile) {
         nameLabel.text =  profile.name.isEmpty ? "Имя не указано" : profile.name
         loginNameLabel.text = profile.loginName.isEmpty ? "@неизвестный пользователь" : profile.loginName
         descriptionLabel.text = (profile.bio?.isEmpty ?? true) ? "Профиль не заполнен" : profile.bio
     }
+ 
+    
 
     // MARK: - Setup Methods
 
