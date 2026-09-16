@@ -13,7 +13,7 @@ enum AuthServiceError: Error {
 
 final class OAuth2Service {
     static let shared = OAuth2Service()
-    private let oauthTokenStorage = OAuth2TokenStorage()
+    private let oauthTokenStorage = OAuth2TokenStorage.shared
     private let urlSession = URLSession.shared
     private var task: URLSessionTask?
     private var lastCode: String?
@@ -35,33 +35,28 @@ final class OAuth2Service {
         lastCode = code
 
         guard let request = makeOAuthTokenRequest(code: code) else {
-            print("Failed to create OAuthTokenRequest")
+            print(
+                "[OAuth2Service.fetchOAuthToken]: RequestCreationError - не удалось создать URLRequest для кода: \(code)"
+            )
             completion(.failure(AuthServiceError.invalidRequest))
             return
         }
 
-        let task = URLSession.shared.data(for: request) { [weak self] result in
+        let task = urlSession.objectTask(for: request) {
+            [weak self] (result: Result<OAuthTokenResponseBody, Error>) in
             guard let self else { return }
 
             DispatchQueue.main.async {
+                UIBlockingProgressHUD.dismiss()
                 switch result {
-                case .success(let data):
-                    do {
-                        let decoder = JSONDecoder()
-                        let accessToken = try decoder.decode(
-                            OAuthTokenResponseBody.self,
-                            from: data
-                        ).accessToken
-
-                        self.oauthTokenStorage.token = accessToken
-                        completion(.success(accessToken))
-                    } catch {
-                        print(error.localizedDescription)
-                        completion(.failure(NetworkError.decodingError(error)))
-                    }
-
+                case .success(let decoded):
+                    let accessToken = decoded.accessToken
+                    self.oauthTokenStorage.token = accessToken
+                    completion(.success(accessToken))
                 case .failure(let error):
-                    print(error.localizedDescription)
+                    print(
+                        "[OAuth2Service]: NetworkError - не удалось получить токен. Ошибка: \(error)"
+                    )
                     completion(.failure(error))
                 }
                 self.task = nil
@@ -79,7 +74,9 @@ final class OAuth2Service {
                 string: Constants.URL.token
             )
         else {
-            print("Failed to create URLComponents")
+            print(
+                "[OAuth2Service.makeOAuthTokenRequest]: URLComponentsError - не удалось создать компоненты из базовой строки"
+            )
             assertionFailure("Failed to create URLComponents")
             return nil
         }
@@ -93,7 +90,9 @@ final class OAuth2Service {
         ]
 
         guard let url = urlComponents.url else {
-            print("Failed to create URL")
+            print(
+                "[OAuth2Service.makeOAuthTokenRequest]: URLError - не удалось сформировать итоговый URL с параметрами"
+            )
             return nil
         }
 

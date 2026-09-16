@@ -22,6 +22,11 @@ extension URLSession {
     ) -> URLSessionTask {
         let fulfillCompletionOnTheMainThread: (Result<Data, Error>) -> Void = {
             result in
+            if case .failure(let error) = result {
+                let urlString = request.url?.absoluteString ?? "unknown URL"
+                print("[data(for:)]: \(error) - URL: \(urlString)")
+            }
+
             DispatchQueue.main.async {
                 completion(result)
             }
@@ -47,6 +52,37 @@ extension URLSession {
                 fulfillCompletionOnTheMainThread(
                     .failure(NetworkError.urlSessionError)
                 )
+            }
+        }
+
+        return task
+    }
+
+    func objectTask<T: Decodable>(
+        for request: URLRequest,
+        completion: @escaping (Result<T, Error>) -> Void
+    ) -> URLSessionTask {
+        let decoder = JSONDecoder()
+        let task = data(for: request) { (result: Result<Data, Error>) in
+            switch result {
+            case .success(let data):
+                if let jsonString = String(data: data, encoding: .utf8) {
+                    print("Полученные данные: \(jsonString)")
+                }
+                do {
+                    let decoded = try decoder.decode(T.self, from: data)
+                    completion(.success(decoded))
+                } catch {
+                    let rawDataString =
+                        String(data: data, encoding: .utf8)
+                        ?? "содержимое не является UTF8"
+                    print(
+                        "[objectTask(for:)]: DecodingError - Error: \(error). Data: \(rawDataString)"
+                    )
+                    completion(.failure(NetworkError.decodingError(error)))
+                }
+            case .failure(let error):
+                completion(.failure(error))
             }
         }
 

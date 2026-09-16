@@ -32,6 +32,7 @@ struct Profile {
 }
 
 final class ProfileService {
+
     static let shared = ProfileService()
     private let urlSession = URLSession.shared
     private var task: URLSessionTask?
@@ -45,31 +46,30 @@ final class ProfileService {
     ) {
         task?.cancel()
         guard let request = makeProfileRequest(token) else {
+            let urlError = URLError(.badURL)
+            print(
+                "[ProfileService.fetchProfile]: RequestCreationError - не удалось создать URLRequest"
+            )
+
+            completion(.failure(urlError))
             return
         }
 
-        let task = urlSession.data(for: request) { [weak self] result in
+        let task = urlSession.objectTask(for: request) {
+            [weak self] (result: Result<ProfileResult, Error>) in
             guard let self else { return }
 
             switch result {
-            case .success(let data):
-                do {
-                    let decoder = JSONDecoder()
-                    let profileResult = try decoder.decode(
-                        ProfileResult.self,
-                        from: data
-                    )
-                    let profile = Profile(
-                        username: profileResult.username,
-                        name:
-                            "\(profileResult.firstName) \(profileResult.lastName)",
-                        bio: profileResult.bio
-                    )
-                    self.profile = profile
-                    completion(.success(profile))
-                } catch {
-                    completion(.failure(error))
-                }
+            case .success(let profileResult):
+                let profile = Profile(
+                    username: profileResult.username,
+                    name:
+                        "\(profileResult.firstName) \(profileResult.lastName)",
+                    bio: profileResult.bio
+                )
+                self.profile = profile
+                completion(.success(profile))
+
             case .failure(let error):
                 completion(.failure(error))
             }
@@ -82,8 +82,12 @@ final class ProfileService {
     }
 
     private func makeProfileRequest(_ authToken: String) -> URLRequest? {
-        guard let url = URL(string: "\(Constants.defaultBaseURLString)/me")
+        let urlString = "\(Constants.defaultBaseURLString)/me"
+        guard let url = URL(string: urlString)
         else {
+            print(
+                "[ProfileService.makeProfileRequest]: URLError - не удалось сформировать URL из строки: \(urlString)"
+            )
             return nil
         }
 
