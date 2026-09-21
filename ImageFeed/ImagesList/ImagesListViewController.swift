@@ -7,11 +7,16 @@
 
 import UIKit
 
-class ImagesListViewController: UIViewController {
+final class ImagesListViewController: UIViewController {
 
-    // MARK: - IBOutlets
-
-    @IBOutlet private weak var tableView: UITableView!
+    private lazy var tableView: UITableView = {
+        let tableView = UITableView()
+        tableView.translatesAutoresizingMaskIntoConstraints = false
+        tableView.rowHeight = 200
+        tableView.backgroundColor = UIColor(resource: .ypBlack)
+        tableView.separatorStyle = .none
+        return tableView
+    }()
 
     // MARK: - Properties
 
@@ -24,6 +29,29 @@ class ImagesListViewController: UIViewController {
         return formatter
     }()
 
+    private func setupUI() {
+
+        view.addSubview(tableView)
+    }
+
+    private func setupTable() {
+        tableView.dataSource = self
+        tableView.delegate = self
+        tableView.register(
+            ImagesListCell.self,
+            forCellReuseIdentifier: ImagesListCell.reuseIdentifier
+        )
+    }
+
+    private func setupConstraints() {
+        NSLayoutConstraint.activate([
+            tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            tableView.topAnchor.constraint(equalTo: view.topAnchor),
+            tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+        ])
+    }
+
     private let showSingleImageSegueIdentifier = "ShowSingleImage"
 
     // MARK: - Lifecycle
@@ -31,6 +59,9 @@ class ImagesListViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
+        setupUI()
+        setupConstraints()
+        setupTable()
         tableView.contentInset = UIEdgeInsets(
             top: 12,
             left: 0,
@@ -39,24 +70,6 @@ class ImagesListViewController: UIViewController {
         )
     }
 
-    // MARK: - Navigation
-
-    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
-        if segue.identifier == showSingleImageSegueIdentifier {
-            guard
-                let viewController = segue.destination
-                    as? SingleImageViewController,
-                let indexPath = sender as? IndexPath
-            else {
-                assertionFailure("Invalid segue destination")
-                return
-            }
-            let image = UIImage(named: photosName[indexPath.row])
-            viewController.image = image
-        } else {
-            super.prepare(for: segue, sender: sender)
-        }
-    }
 }
 
 // MARK: - UITableViewDataSource
@@ -97,10 +110,13 @@ extension ImagesListViewController: UITableViewDelegate {
         _ tableView: UITableView,
         didSelectRowAt indexPath: IndexPath
     ) {
-        performSegue(
-            withIdentifier: showSingleImageSegueIdentifier,
-            sender: indexPath
-        )
+
+        let viewController = SingleImageViewController()
+        let image = UIImage(named: photosName[indexPath.row])
+        viewController.image = image
+        viewController.modalPresentationStyle = .fullScreen
+
+        present(viewController, animated: true)
     }
 
     func tableView(
@@ -121,4 +137,8 @@ extension ImagesListViewController: UITableViewDelegate {
             image.size.height * scale + imageInsets.top + imageInsets.bottom
         return cellHeight
     }
+}
+
+#Preview {
+    ImagesListViewController()
 }

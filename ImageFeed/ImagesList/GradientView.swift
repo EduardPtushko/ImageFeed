@@ -5,6 +5,7 @@
 //  Created by Eduard Ptushko on 05.08.2026.
 //
 
+import SwiftUI
 import UIKit
 
 @IBDesignable
@@ -52,4 +53,20 @@ class GradientView: UIView {
         gradientLayer.startPoint = start
         gradientLayer.endPoint = end
     }
+}
+
+#Preview {
+    ViewPreview {
+        let view = GradientView()
+
+        view.startColor = UIColor(resource: .gradientStart)
+        view.endColor = UIColor(resource: .gradientEnd)
+
+        view.bottomCornerRadius = 16
+
+        return view
+    }
+    .frame(height: 150)
+
+    .padding()
 }

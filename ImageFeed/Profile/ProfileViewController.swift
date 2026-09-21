@@ -5,17 +5,31 @@
 //  Created by Eduard Ptushko on 06.08.2026.
 //
 
+import Kingfisher
 import UIKit
 
 final class ProfileViewController: UIViewController {
+
+    private let profileService = ProfileService.shared
+    private var profileImageServiceObserver: NSObjectProtocol?
 
     // MARK: - UI Elements
 
     private lazy var avatarImageView: UIImageView = {
         let imageView = UIImageView()
-        let image = UIImage(resource: .avatar)
+        let image = UIImage(systemName: "person.circle.fill")?
+            .withTintColor(.lightGray, renderingMode: .alwaysOriginal)
+            .withConfiguration(
+                UIImage.SymbolConfiguration(
+                    pointSize: 70,
+                    weight: .regular,
+                    scale: .large
+                )
+            )
         imageView.image = image
         imageView.translatesAutoresizingMaskIntoConstraints = false
+        imageView.contentMode = .scaleAspectFit
+        imageView.clipsToBounds = true
         return imageView
     }()
 
@@ -65,11 +79,83 @@ final class ProfileViewController: UIViewController {
 
         setupUI()
         setupConstraints()
+
+        guard let profile = profileService.profile else { return }
+        updateProfileDetails(with: profile)
+
+        profileImageServiceObserver = NotificationCenter.default
+            .addObserver(
+                forName: ProfileImageService.didChangeNotification,
+                object: nil,
+                queue: .main
+            ) { [weak self] _ in
+                guard let self else { return }
+                self.updateAvatar()
+            }
+        updateAvatar()
+    }
+
+    deinit {
+        if let observer = profileImageServiceObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
+    }
+
+    private func updateAvatar() {
+        guard let profileImageURL = ProfileImageService.shared.avatarURL,
+            let url = URL(string: profileImageURL)
+        else {
+            return
+        }
+
+        let profileImagePlaceholder = UIImage(systemName: "person.circle.fill")?
+            .withTintColor(.lightGray, renderingMode: .alwaysOriginal)
+            .withConfiguration(
+                UIImage.SymbolConfiguration(
+                    pointSize: 70,
+                    weight: .regular,
+                    scale: .large
+                )
+            )
+
+        let processor = RoundCornerImageProcessor(cornerRadius: 35)
+
+        avatarImageView.kf.indicatorType = .activity
+        avatarImageView.kf.setImage(
+            with: url,
+            placeholder: profileImagePlaceholder,
+            options: [
+                .processor(processor),
+                .scaleFactor(UIScreen.main.scale),
+                .cacheOriginalImage, .forceRefresh,
+            ]
+        ) { result in
+            switch result {
+            case .success(let value):
+                print(
+                    "[ProfileViewController.updateAvatar]: Success - Аватар загружен из источника: \(value.source) для URL: \(url)"
+                )
+            case .failure(let error):
+                print(
+                    "[ProfileViewController.updateAvatar]: KingfisherError - \(error.localizedDescription) для URL: \(url)"
+                )
+            }
+        }
+    }
+
+    private func updateProfileDetails(with profile: Profile) {
+        nameLabel.text = profile.name.isEmpty ? "Имя не указано" : profile.name
+        loginNameLabel.text =
+            profile.loginName.isEmpty
+            ? "@неизвестный пользователь" : profile.loginName
+        descriptionLabel.text =
+            (profile.bio?.isEmpty ?? true) ? "Профиль не заполнен" : profile.bio
     }
 
     // MARK: - Setup Methods
 
     private func setupUI() {
+        view.backgroundColor = UIColor(resource: .ypBlack)
         [
             avatarImageView, logoutButton, nameLabel, loginNameLabel,
             descriptionLabel,

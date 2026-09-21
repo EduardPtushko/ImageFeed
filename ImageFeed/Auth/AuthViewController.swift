@@ -5,6 +5,7 @@
 //  Created by Eduard Ptushko on 24.08.2026.
 //
 
+import ProgressHUD
 import UIKit
 
 // MARK: - AuthViewControllerDelegate
@@ -66,19 +67,41 @@ extension AuthViewController: WebViewViewControllerDelegate {
         _ vc: WebViewViewController,
         didAuthenticateWithCode code: String
     ) {
+        vc.dismiss(animated: true)
+        UIBlockingProgressHUD.show()
+
         oauth2Service.fetchOAuthToken(code) { [weak self] result in
+            UIBlockingProgressHUD.dismiss()
+
             guard let self else { return }
 
             switch result {
             case .success:
                 self.delegate?.didAuthenticate(self)
             case .failure(let error):
-                print(error.localizedDescription)
+                print(
+                    "[AuthViewController.webViewViewController]: NetworkError - \(error) при обработке кода авторизации: \(code)"
+                )
+                self.showNetworkErrorAlert()
             }
         }
     }
 
     func webViewViewControllerDidCancel(_ vc: WebViewViewController) {
         dismiss(animated: true)
+    }
+}
+
+extension AuthViewController {
+    private func showNetworkErrorAlert() {
+        let alert = UIAlertController(
+            title: "Что-то пошло не так",
+            message: "Не удалось войти в систему",
+            preferredStyle: .alert
+        )
+        alert.view.accessibilityIdentifier = "Alert"
+        let action = UIAlertAction(title: "Ок", style: .default)
+        alert.addAction(action)
+        present(alert, animated: true)
     }
 }
