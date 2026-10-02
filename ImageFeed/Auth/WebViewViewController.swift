@@ -5,6 +5,7 @@
 //  Created by Eduard Ptushko on 24.08.2026.
 //
 
+import OSLog
 import UIKit
 import WebKit
 
@@ -65,8 +66,9 @@ final class WebViewViewController: UIViewController {
                 string: Constants.URL.authorize
             )
         else {
-            print(
-                "[WebViewViewController.updateProgress]: URLComponentsError - не удалось создать компоненты из базовой строки"
+            Logger.logError(
+                category: .network,
+                "URLComponentsError - не удалось создать компоненты из базовой строки"
             )
             return
         }
@@ -79,8 +81,9 @@ final class WebViewViewController: UIViewController {
         ]
 
         guard let url = urlComponents.url else {
-            print(
-                "[WebViewViewController.updateProgress]: URLError - не удалось сформировать итоговый URL с параметрами"
+            Logger.logError(
+                category: .network,
+                "URLError - не удалось сформировать итоговый URL с параметрами"
             )
             return
         }

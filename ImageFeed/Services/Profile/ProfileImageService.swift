@@ -6,33 +6,29 @@
 //
 
 import Foundation
+import OSLog
 
 final class ProfileImageService {
 
-    struct ProfileImage: Codable {
-        let small: String
-        let medium: String
-        let large: String
-    }
-
-    struct UserResult: Codable {
-        let profileImage: ProfileImage
-
-        private enum CodingKeys: String, CodingKey {
-            case profileImage = "profile_image"
-        }
-    }
+    // MARK: - Constants
 
     static let shared = ProfileImageService()
     static let didChangeNotification = Notification.Name(
-        rawValue: "ProfileImageProviderDidChange"
+        "ProfileImageProviderDidChange"
     )
+
+    // MARK: - Private Properties
+
     private let storage = OAuth2TokenStorage.shared
     private let urlSession = URLSession.shared
     private(set) var avatarURL: String?
     private var task: URLSessionTask?
 
+    // MARK: - Init
+
     private init() {}
+
+    // MARK: - Public Methods
 
     func fetchProfileImageURL(
         username: String,
@@ -48,8 +44,10 @@ final class ProfileImageService {
                     NSLocalizedDescriptionKey: "Authorization token missing"
                 ]
             )
-            print(
-                "[ProfileImageService.fetchProfileImageURL]: AuthError - отсутствует токен авторизации для пользователя: \(username)"
+            Logger.logError(
+                category: .network,
+                "AuthError - отсутствует токен авторизации для пользователя: \(username)",
+                error: tokenError
             )
 
             completion(.failure(tokenError))
@@ -63,8 +61,10 @@ final class ProfileImageService {
             )
         else {
             let urlError = URLError(.badURL)
-            print(
-                "[ProfileImageService.fetchProfileImageURL]: RequestCreationError - не удалось создать URLRequest для пользователя: \(username)"
+            Logger.logError(
+                category: .network,
+                "RequestCreationError - не удалось создать URLRequest для пользователя: \(username)",
+                error: urlError
             )
 
             completion(.failure(urlError))
@@ -92,8 +92,10 @@ final class ProfileImageService {
                         )
                 }
             case .failure(let error):
-                print(
-                    "[ProfileImageService.fetchProfileImageURL]: NetworkError - \(error) для пользователя: \(username)"
+                Logger.logError(
+                    category: .network,
+                    "NetworkError - \(error) для пользователя: \(username)",
+                    error: error
                 )
                 completion(.failure(error))
             }
@@ -103,6 +105,14 @@ final class ProfileImageService {
         task.resume()
     }
 
+    func clearAvatarData() {
+        task?.cancel()
+        task = nil
+        avatarURL = nil
+    }
+
+    // MARK: - Private Methods
+
     private func makeProfileImageRequest(username: String, token: String)
         -> URLRequest?
     {
@@ -111,14 +121,15 @@ final class ProfileImageService {
                 string: "\(Constants.defaultBaseURLString)/users/\(username)"
             )
         else {
-            print(
-                "[ProfileImageService.makeProfileImageRequest]: URLError - не удалось сформировать URL для строки: \(Constants.defaultBaseURLString)/users/\(username)"
+            Logger.logError(
+                category: .network,
+                "URLError - не удалось сформировать URL для строки: \(Constants.defaultBaseURLString)/users/\(username)"
             )
             return nil
         }
 
         var request = URLRequest(url: url)
-        request.httpMethod = "GET"
+        request.httpMethod = HTTPMethod.get.rawValue
         request.setValue(
             "Bearer \(token)",
             forHTTPHeaderField: "Authorization"

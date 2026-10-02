@@ -16,8 +16,8 @@ final class TabBarController: UITabBarController {
 
     private func setupTabs() {
         view.backgroundColor = UIColor(resource: .ypBlack)
-        tabBar.tintColor = .white  // Цвет активных иконок
-        tabBar.barTintColor = UIColor(resource: .ypBlack)  // Фон таб-бара
+        tabBar.tintColor = .white
+        tabBar.barTintColor = UIColor(resource: .ypBlack)
 
         let imagesListViewController = ImagesListViewController()
         imagesListViewController.tabBarItem = UITabBarItem(

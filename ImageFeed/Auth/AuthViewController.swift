@@ -5,6 +5,7 @@
 //  Created by Eduard Ptushko on 24.08.2026.
 //
 
+import OSLog
 import ProgressHUD
 import UIKit
 
@@ -79,8 +80,10 @@ extension AuthViewController: WebViewViewControllerDelegate {
             case .success:
                 self.delegate?.didAuthenticate(self)
             case .failure(let error):
-                print(
-                    "[AuthViewController.webViewViewController]: NetworkError - \(error) при обработке кода авторизации: \(code)"
+                Logger.logError(
+                    category: .network,
+                    "[AuthViewController.webViewViewController]: NetworkError - Ошибка при обработке кода авторизации: \(code)",
+                    error: error
                 )
                 self.showNetworkErrorAlert()
             }

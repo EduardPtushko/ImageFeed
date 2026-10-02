@@ -17,5 +17,6 @@ enum Constants {
     enum URL {
         static let authorize = "https://unsplash.com/oauth/authorize"
         static let token = "https://unsplash.com/oauth/token"
+        static let photos = "https://api.unsplash.com/photos"
     }
 }

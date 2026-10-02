@@ -5,6 +5,8 @@
 //  Created by Eduard Ptushko on 10.08.2026.
 //
 
+import Kingfisher
+import OSLog
 import SwiftUI
 import UIKit
 
@@ -57,10 +59,14 @@ final class SingleImageViewController: UIViewController {
             guard isViewLoaded, let image else { return }
 
             imageView.image = image
+            scrollView.setZoomScale(1.0, animated: false)
             imageView.frame.size = image.size
+            scrollView.contentSize = image.size
             rescaleAndCenterImageInScrollView(image: image)
         }
     }
+
+    var imageUrl: String?
 
     // MARK: - Lifecycle
 
@@ -74,11 +80,33 @@ final class SingleImageViewController: UIViewController {
         scrollView.minimumZoomScale = 0.1
         scrollView.maximumZoomScale = 1.25
 
-        guard let image else { return }
+        loadNetworkImage()
+    }
 
-        imageView.image = image
-        imageView.frame.size = image.size
-        rescaleAndCenterImageInScrollView(image: image)
+    private func loadNetworkImage() {
+        guard let imageUrl, let url = URL(string: imageUrl) else {
+            return
+        }
+        UIBlockingProgressHUD.show()
+
+        imageView.kf.setImage(with: url) { [weak self] result in
+            UIBlockingProgressHUD.dismiss()
+            guard let self else { return }
+
+            switch result {
+            case .success(let value):
+                self.image = value.image
+            case .failure(let error):
+                Logger.logError(
+                    category: .images,
+                    "Не удалось загрузить картинку с Unsplash",
+                    error: error
+                )
+                if !error.isTaskCancelled {
+                    self.showError()
+                }
+            }
+        }
     }
 
     private func setupUI() {
@@ -125,6 +153,8 @@ final class SingleImageViewController: UIViewController {
     // MARK: - Actions
 
     @objc private func didTapBackButton() {
+        imageView.kf.cancelDownloadTask()
+
         dismiss(animated: true)
     }
 
@@ -166,12 +196,35 @@ extension SingleImageViewController: UIScrollViewDelegate {
     }
 }
 
+extension SingleImageViewController {
+    private func showError() {
+        let alert = UIAlertController(
+            title: "",
+            message: "Что-то пошло не так. Попробовать ещё раз?",
+            preferredStyle: .alert
+        )
+        alert.view.accessibilityIdentifier = "Alert"
+        let logoutAction = UIAlertAction(title: "Повторить", style: .default) {
+            [weak self] _ in
+            guard let self else { return }
+            self.loadNetworkImage()
+        }
+        let cancelAction = UIAlertAction(title: "Не надо", style: .default)
+
+        alert.addAction(logoutAction)
+        alert.addAction(cancelAction)
+
+        present(alert, animated: true)
+    }
+}
+
 #Preview {
     ViewControllerPreview {
         let viewController = SingleImageViewController()
-
-        viewController.image = UIImage(resource: ._3)
-
+        _ = viewController.view
+        //        viewController.image = UIImage(resource: ._3)
+        viewController.imageUrl =
+            "https://images.unsplash.com/photo-1779896412192-cca060dfafde?crop=entropy&cs=srgb&fm=jpg&ixid=M3wxMDMzNDkyfDF8MXxhbGx8MXx8fHx8fHx8MTc5MDE4MDE3OHw&ixlib=rb-4.1.0&q=85"
         return viewController
     }
     .ignoresSafeArea()

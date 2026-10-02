@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import OSLog
 
 enum AuthServiceError: Error {
     case invalidRequest
@@ -27,6 +28,9 @@ final class OAuth2Service {
         assert(Thread.isMainThread)
 
         guard lastCode != code else {
+            Logger.auth.warning(
+                "Попытка повторного запроса токена с тем же кодом авторизации заблокирована"
+            )
             completion(.failure(AuthServiceError.invalidRequest))
             return
         }
@@ -35,8 +39,9 @@ final class OAuth2Service {
         lastCode = code
 
         guard let request = makeOAuthTokenRequest(code: code) else {
-            print(
-                "[OAuth2Service.fetchOAuthToken]: RequestCreationError - не удалось создать URLRequest для кода: \(code)"
+            Logger.logError(
+                category: .auth,
+                "RequestCreationError - не удалось создать URLRequest для кода: \(code)"
             )
             completion(.failure(AuthServiceError.invalidRequest))
             return
@@ -52,10 +57,16 @@ final class OAuth2Service {
                 case .success(let decoded):
                     let accessToken = decoded.accessToken
                     self.oauthTokenStorage.token = accessToken
+
+                    Logger.auth.info(
+                        "Токен авторизации успешно получен от Unsplash API"
+                    )
                     completion(.success(accessToken))
                 case .failure(let error):
-                    print(
-                        "[OAuth2Service]: NetworkError - не удалось получить токен. Ошибка: \(error)"
+                    Logger.logError(
+                        category: .auth,
+                        "NetworkError - не удалось получить токен",
+                        error: error
                     )
                     completion(.failure(error))
                 }
@@ -74,8 +85,9 @@ final class OAuth2Service {
                 string: Constants.URL.token
             )
         else {
-            print(
-                "[OAuth2Service.makeOAuthTokenRequest]: URLComponentsError - не удалось создать компоненты из базовой строки"
+            Logger.logError(
+                category: .auth,
+                "URLComponentsError - не удалось создать компоненты из базовой строки"
             )
             assertionFailure("Failed to create URLComponents")
             return nil
@@ -90,14 +102,15 @@ final class OAuth2Service {
         ]
 
         guard let url = urlComponents.url else {
-            print(
-                "[OAuth2Service.makeOAuthTokenRequest]: URLError - не удалось сформировать итоговый URL с параметрами"
+            Logger.logError(
+                category: .auth,
+                "URLError - не удалось сформировать итоговый URL с параметрами"
             )
             return nil
         }
 
         var request = URLRequest(url: url)
-        request.httpMethod = "POST"
+        request.httpMethod = HTTPMethod.post.rawValue
 
         return request
     }
