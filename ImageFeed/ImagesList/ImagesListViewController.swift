@@ -152,8 +152,7 @@ extension ImagesListViewController: UITableViewDataSource {
 
         let photo = photos[indexPath.row]
         let dateString =
-            photo.createdAt != nil
-            ? dateFormatter.string(from: photo.createdAt!) : ""
+            photo.createdAt.map { dateFormatter.string(from: $0) } ?? ""
 
         imageListCell.configure(
             image: photo.thumbImageURL,

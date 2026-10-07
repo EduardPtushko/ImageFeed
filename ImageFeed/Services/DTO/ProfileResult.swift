@@ -21,12 +21,4 @@ struct ProfileResult: Codable {
     }
 }
 
-struct Profile {
-    let username: String
-    let name: String
-    let bio: String?
 
-    var loginName: String {
-        "@\(username)"
-    }
-}

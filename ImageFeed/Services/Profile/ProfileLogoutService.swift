@@ -23,6 +23,9 @@ final class ProfileLogoutService {
         ProfileService.shared.clearProfileData()
         Logger.profile.info("Данные профиля успешно удалены")
 
+        ProfileImageService.shared.clearAvatarData()
+        Logger.profile.info("Данные аватара профиля успешно удалены")
+
         ImagesListService.shared.clearImageListServiceData()
         Logger.images.info(
             "Массив фотографий и состояние пагинации успешно сброшены"
