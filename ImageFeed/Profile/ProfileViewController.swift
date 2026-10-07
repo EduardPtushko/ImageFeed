@@ -6,11 +6,15 @@
 //
 
 import Kingfisher
+import OSLog
 import UIKit
 
 final class ProfileViewController: UIViewController {
 
+    // MARK: - Private Properties
+
     private let profileService = ProfileService.shared
+    private let profileLogoutService = ProfileLogoutService.shared
     private var profileImageServiceObserver: NSObjectProtocol?
 
     // MARK: - UI Elements
@@ -30,6 +34,8 @@ final class ProfileViewController: UIViewController {
         imageView.translatesAutoresizingMaskIntoConstraints = false
         imageView.contentMode = .scaleAspectFit
         imageView.clipsToBounds = true
+        imageView.layer.cornerRadius = 35
+        imageView.layer.masksToBounds = true
         return imageView
     }()
 
@@ -80,8 +86,9 @@ final class ProfileViewController: UIViewController {
         setupUI()
         setupConstraints()
 
-        guard let profile = profileService.profile else { return }
-        updateProfileDetails(with: profile)
+        if let profile = profileService.profile {
+            updateProfileDetails(with: profile)
+        }
 
         profileImageServiceObserver = NotificationCenter.default
             .addObserver(
@@ -99,57 +106,6 @@ final class ProfileViewController: UIViewController {
         if let observer = profileImageServiceObserver {
             NotificationCenter.default.removeObserver(observer)
         }
-    }
-
-    private func updateAvatar() {
-        guard let profileImageURL = ProfileImageService.shared.avatarURL,
-            let url = URL(string: profileImageURL)
-        else {
-            return
-        }
-
-        let profileImagePlaceholder = UIImage(systemName: "person.circle.fill")?
-            .withTintColor(.lightGray, renderingMode: .alwaysOriginal)
-            .withConfiguration(
-                UIImage.SymbolConfiguration(
-                    pointSize: 70,
-                    weight: .regular,
-                    scale: .large
-                )
-            )
-
-        let processor = RoundCornerImageProcessor(cornerRadius: 35)
-
-        avatarImageView.kf.indicatorType = .activity
-        avatarImageView.kf.setImage(
-            with: url,
-            placeholder: profileImagePlaceholder,
-            options: [
-                .processor(processor),
-                .scaleFactor(UIScreen.main.scale),
-                .cacheOriginalImage, .forceRefresh,
-            ]
-        ) { result in
-            switch result {
-            case .success(let value):
-                print(
-                    "[ProfileViewController.updateAvatar]: Success - Аватар загружен из источника: \(value.source) для URL: \(url)"
-                )
-            case .failure(let error):
-                print(
-                    "[ProfileViewController.updateAvatar]: KingfisherError - \(error.localizedDescription) для URL: \(url)"
-                )
-            }
-        }
-    }
-
-    private func updateProfileDetails(with profile: Profile) {
-        nameLabel.text = profile.name.isEmpty ? "Имя не указано" : profile.name
-        loginNameLabel.text =
-            profile.loginName.isEmpty
-            ? "@неизвестный пользователь" : profile.loginName
-        descriptionLabel.text =
-            (profile.bio?.isEmpty ?? true) ? "Профиль не заполнен" : profile.bio
     }
 
     // MARK: - Setup Methods
@@ -216,5 +172,100 @@ final class ProfileViewController: UIViewController {
     // MARK: - Actions
 
     @objc private func didTapLogoutButton() {
+        confirmLogout()
+    }
+}
+
+// MARK: - Private Methods
+
+extension ProfileViewController {
+    private func updateAvatar() {
+        guard let profileImageURL = ProfileImageService.shared.avatarURL,
+            let url = URL(string: profileImageURL)
+        else {
+            return
+        }
+
+        let profileImagePlaceholder = UIImage(systemName: "person.circle.fill")?
+            .withTintColor(.lightGray, renderingMode: .alwaysOriginal)
+            .withConfiguration(
+                UIImage.SymbolConfiguration(
+                    pointSize: 70,
+                    weight: .regular,
+                    scale: .large
+                )
+            )
+
+        avatarImageView.kf.indicatorType = .activity
+        avatarImageView.kf.setImage(
+            with: url,
+            placeholder: profileImagePlaceholder,
+            options: [
+                .scaleFactor(UIScreen.main.scale),
+                .cacheOriginalImage,
+            ]
+        ) { result in
+            switch result {
+            case .success(let value):
+                Logger.profile.debug(
+                    "Success - Аватар загружен из источника: \(String(describing: value.source)) для URL: \(url)"
+                )
+            case .failure(let error):
+                Logger.logError(
+                    category: .profile,
+                    "KingfisherError - \(error.localizedDescription) для URL: \(url)",
+                    error: error
+                )
+            }
+        }
+    }
+
+    private func updateProfileDetails(with profile: Profile) {
+        nameLabel.text = profile.name.isEmpty ? "Имя не указано" : profile.name
+        loginNameLabel.text =
+            profile.loginName.isEmpty
+            ? "@неизвестный пользователь" : profile.loginName
+        descriptionLabel.text =
+            (profile.bio?.isEmpty ?? true) ? "Профиль не заполнен" : profile.bio
+    }
+
+    private func confirmLogout() {
+        let alert = UIAlertController(
+            title: "Пока, пока!",
+            message: "Уверены, что хотите выйти?",
+            preferredStyle: .alert
+        )
+        alert.view.accessibilityIdentifier = "Alert"
+
+        let logoutAction = UIAlertAction(title: "Да", style: .default) {
+            [weak self] _ in
+            guard let self else { return }
+
+            self.profileLogoutService.logout()
+
+            let splashViewController = SplashViewController()
+
+            let keyWindow = UIApplication.shared.connectedScenes
+                .compactMap { $0 as? UIWindowScene }
+                .flatMap { $0.windows }
+                .first { $0.isKeyWindow }
+
+            if let window = keyWindow {
+                window.rootViewController = splashViewController
+                UIView.transition(
+                    with: window,
+                    duration: 0.3,
+                    options: .transitionCrossDissolve,
+                    animations: nil,
+                    completion: nil
+                )
+            }
+        }
+        let cancelAction = UIAlertAction(title: "Нет", style: .default)
+
+        alert.addAction(logoutAction)
+        alert.addAction(cancelAction)
+
+        present(alert, animated: true)
     }
 }

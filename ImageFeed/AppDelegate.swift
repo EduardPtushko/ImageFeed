@@ -5,6 +5,8 @@
 //  Created by Eduard Ptushko on 24.07.2026.
 //
 
+import ProgressHUD
+import SwiftUI
 import UIKit
 
 @main
@@ -15,15 +17,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         didFinishLaunchingWithOptions launchOptions: [UIApplication
             .LaunchOptionsKey: Any]?
     ) -> Bool {
-        let appearance = UITabBarAppearance()
-        appearance.configureWithOpaqueBackground()
-        appearance.backgroundColor = .ypBlack
-
-        UITabBar.appearance().standardAppearance = appearance
-
-        if #available(iOS 15.0, *) {
-            UITabBar.appearance().scrollEdgeAppearance = appearance
-        }
+        ProgressHUD.animationType = .activityIndicator
+        ProgressHUD.colorHUD = .white
+        ProgressHUD.colorAnimation = .black
         return true
     }
 
@@ -37,7 +33,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         let sceneConfiguration = UISceneConfiguration(
             name: "Main",
             sessionRole: connectingSceneSession.role
-            
         )
         sceneConfiguration.delegateClass = SceneDelegate.self
         return sceneConfiguration
@@ -47,9 +42,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         _ application: UIApplication,
         didDiscardSceneSessions sceneSessions: Set<UISceneSession>
     ) {
-        // Called when the user discards a scene session.
-        // If any sessions were discarded while the application was not running, this will be called shortly after application:didFinishLaunchingWithOptions.
-        // Use this method to release any resources that were specific to the discarded scenes, as they will not return.
     }
 
 }

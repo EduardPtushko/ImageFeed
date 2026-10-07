@@ -6,6 +6,9 @@
 //
 
 import Foundation
+import OSLog
+
+// MARK: - Network Types
 
 enum NetworkError: Error {
     case httpStatusCode(Int)
@@ -15,7 +18,18 @@ enum NetworkError: Error {
     case decodingError(Error)
 }
 
+enum HTTPMethod: String {
+    case get = "GET"
+    case post = "POST"
+    case put = "PUT"
+    case delete = "DELETE"
+}
+
+// MARK: - URLSession Extensions
+
 extension URLSession {
+    // MARK: - Raw Data Task
+
     func data(
         for request: URLRequest,
         completion: @escaping (Result<Data, Error>) -> Void
@@ -24,7 +38,11 @@ extension URLSession {
             result in
             if case .failure(let error) = result {
                 let urlString = request.url?.absoluteString ?? "unknown URL"
-                print("[data(for:)]: \(error) - URL: \(urlString)")
+                Logger.logError(
+                    category: .network,
+                    "Сетевой запрос завершился неудачей для URL: \(urlString)",
+                    error: error
+                )
             }
 
             DispatchQueue.main.async {
@@ -44,7 +62,6 @@ extension URLSession {
                     )
                 }
             } else if let error {
-                print(error.localizedDescription)
                 fulfillCompletionOnTheMainThread(
                     .failure(NetworkError.urlRequestError(error))
                 )
@@ -58,6 +75,8 @@ extension URLSession {
         return task
     }
 
+    // MARK: - Generic Object Task (JSON Decoding)
+
     func objectTask<T: Decodable>(
         for request: URLRequest,
         completion: @escaping (Result<T, Error>) -> Void
@@ -67,7 +86,7 @@ extension URLSession {
             switch result {
             case .success(let data):
                 if let jsonString = String(data: data, encoding: .utf8) {
-                    print("Полученные данные: \(jsonString)")
+                    Logger.network.debug("Полученный JSON-ответ: \(jsonString)")
                 }
                 do {
                     let decoded = try decoder.decode(T.self, from: data)
@@ -76,9 +95,43 @@ extension URLSession {
                     let rawDataString =
                         String(data: data, encoding: .utf8)
                         ?? "содержимое не является UTF8"
-                    print(
-                        "[objectTask(for:)]: DecodingError - Error: \(error). Data: \(rawDataString)"
-                    )
+
+                    if let decodingError = error as? DecodingError {
+                        switch decodingError {
+                        case .typeMismatch(let type, let context):
+                            Logger.logError(
+                                category: .network,
+                                "JSON Type Mismatch: Ожидался тип \(type) | Путь: \(context.codingPath)\nRaw Data: \(rawDataString)"
+                            )
+                        case .valueNotFound(let type, let context):
+                            Logger.logError(
+                                category: .network,
+                                "JSON Value Not Found: Отсутствует значение для типа \(type) | Путь: \(context.codingPath)\nRaw Data: \(rawDataString)"
+                            )
+                        case .keyNotFound(let key, let context):
+                            Logger.logError(
+                                category: .network,
+                                "❌ JSON Key Not Found: Бэкенд не прислал обязательный ключ '\(key.stringValue)' | Путь: \(context.codingPath)\nRaw Data: \(rawDataString)"
+                            )
+                        case .dataCorrupted(let context):
+                            Logger.logError(
+                                category: .network,
+                                "JSON Data Corrupted: Структура файла повреждена | Контекст: \(context.debugDescription)\nRaw Data: \(rawDataString)"
+                            )
+                        @unknown default:
+                            Logger.logError(
+                                category: .network,
+                                "Непредвиденная ошибка DecodingError",
+                                error: error
+                            )
+                        }
+                    } else {
+                        Logger.logError(
+                            category: .network,
+                            "Общая ошибка при разборе данных",
+                            error: error
+                        )
+                    }
                     completion(.failure(NetworkError.decodingError(error)))
                 }
             case .failure(let error):

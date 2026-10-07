@@ -6,39 +6,23 @@
 //
 
 import Foundation
-
-struct ProfileResult: Codable {
-    let username: String
-    let firstName: String
-    let lastName: String
-    let bio: String?
-
-    private enum CodingKeys: String, CodingKey {
-        case username
-        case firstName = "first_name"
-        case lastName = "last_name"
-        case bio
-    }
-}
-
-struct Profile {
-    let username: String
-    let name: String
-    let bio: String?
-
-    var loginName: String {
-        "@\(username)"
-    }
-}
+import OSLog
 
 final class ProfileService {
 
     static let shared = ProfileService()
+
+    // MARK: - Private Properties
+
     private let urlSession = URLSession.shared
     private var task: URLSessionTask?
     private(set) var profile: Profile?
 
+    // MARK: - Init
+
     private init() {}
+
+    // MARK: - Private Methods
 
     func fetchProfile(
         _ token: String,
@@ -47,8 +31,11 @@ final class ProfileService {
         task?.cancel()
         guard let request = makeProfileRequest(token) else {
             let urlError = URLError(.badURL)
-            print(
-                "[ProfileService.fetchProfile]: RequestCreationError - не удалось создать URLRequest"
+            
+            Logger.logError(
+                category: .network,
+                "RequestCreationError - не удалось создать URLRequest",
+                error: urlError
             )
 
             completion(.failure(urlError))
@@ -71,6 +58,7 @@ final class ProfileService {
                 completion(.success(profile))
 
             case .failure(let error):
+                Logger.logError(category: .network, "NetworkError - Ошибка при получении профайла: ", error: error)
                 completion(.failure(error))
             }
             self.task = nil
@@ -81,18 +69,29 @@ final class ProfileService {
 
     }
 
+    func clearProfileData() {
+        task?.cancel()
+        task = nil
+        profile = nil
+    }
+
+    // MARK: - Private Methods
+
     private func makeProfileRequest(_ authToken: String) -> URLRequest? {
         let urlString = "\(Constants.defaultBaseURLString)/me"
+        
         guard let url = URL(string: urlString)
         else {
-            print(
-                "[ProfileService.makeProfileRequest]: URLError - не удалось сформировать URL из строки: \(urlString)"
-            )
+            Logger
+                .logError(
+                    category: .network,
+                    "URLError - не удалось сформировать URL из строки: \(urlString)"
+                )
             return nil
         }
 
         var request = URLRequest(url: url)
-        request.httpMethod = "GET"
+        request.httpMethod = HTTPMethod.get.rawValue
         request.setValue(
             "Bearer \(authToken)",
             forHTTPHeaderField: "Authorization"
@@ -100,4 +99,5 @@ final class ProfileService {
 
         return request
     }
+
 }

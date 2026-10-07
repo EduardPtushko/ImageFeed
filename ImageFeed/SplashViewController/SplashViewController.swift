@@ -5,11 +5,15 @@
 //  Created by Eduard Ptushko on 28.08.2026.
 //
 
+import OSLog
 import UIKit
 
 // MARK: - SplashViewController
 
 final class SplashViewController: UIViewController {
+
+    // MARK: - Private Properties
+
     private let storage = OAuth2TokenStorage.shared
     private let profileService = ProfileService.shared
 
@@ -24,6 +28,8 @@ final class SplashViewController: UIViewController {
     override var preferredStatusBarStyle: UIStatusBarStyle {
         .lightContent
     }
+
+    // MARK: - Lifecycles
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -47,6 +53,8 @@ final class SplashViewController: UIViewController {
         setNeedsStatusBarAppearanceUpdate()
     }
 
+    // MARK: - UI Setup
+
     private func setupUI() {
         view.backgroundColor = UIColor(resource: .ypBlack)
         view.addSubview(splashScreenImageView)
@@ -63,6 +71,31 @@ final class SplashViewController: UIViewController {
         ])
     }
 
+}
+
+// MARK: - AuthViewControllerDelegate
+
+extension SplashViewController: AuthViewControllerDelegate {
+    func didAuthenticate(_ vc: AuthViewController) {
+        vc.dismiss(animated: true) { [weak self] in
+            guard let self else { return }
+
+            if let token = self.storage.token {
+                self.fetchProfile(token: token)
+            } else {
+                Logger.logError(
+                    category: .network,
+                    "Ошибка - Токен не найден после авторизации"
+                )
+            }
+        }
+
+        switchToTabBarController()
+    }
+}
+
+// MARK: - Private Methods
+extension SplashViewController {
     private func presentAuthViewController() {
         let storyboard = UIStoryboard(name: "Main", bundle: .main)
         guard
@@ -70,9 +103,11 @@ final class SplashViewController: UIViewController {
                 withIdentifier: "AuthViewController"
             ) as? AuthViewController
         else {
-            print(
-                "[SplashViewController.presentAuthViewController]: PresentationError - Не удалось найти AuthViewController в Storyboard"
-            )
+            Logger
+                .logError(
+                    category: .ui,
+                    "Не удалось найти AuthViewController в Storyboard"
+                )
 
             assertionFailure(
                 "Не удалось найти AuthViewController по идентификатору"
@@ -85,21 +120,20 @@ final class SplashViewController: UIViewController {
     }
 
     private func switchToTabBarController() {
-        guard
-            let window = UIApplication.shared.connectedScenes
-                .compactMap({ $0 as? UIWindowScene })
-                .filter({ $0.activationState == .foregroundActive }).first?
-                .keyWindow
-        else {
-            print(
-                "[SplashViewController.switchToTabBarController]: WindowError - Не удалось найти активное keyWindow"
-            )
-            assertionFailure("Invalid window configuration")
-            return
-        }
+        DispatchQueue.main.async {
+            guard let window = SceneDelegate.shared?.window
+            else {
+                Logger.logError(
+                    category: .ui,
+                    "WindowError - Не удалось найти активное keyWindow"
+                )
+                assertionFailure("Invalid window configuration")
+                return
+            }
 
-        let tabBarController = TabBarController()
-        window.rootViewController = tabBarController
+            let tabBarController = TabBarController()
+            window.rootViewController = tabBarController
+        }
     }
 
     private func fetchProfile(token: String) {
@@ -117,34 +151,15 @@ final class SplashViewController: UIViewController {
                 ) { _ in }
                 self.switchToTabBarController()
             case .failure(let error):
-                print(
-                    "[SplashViewController.fetchProfile]: NetworkError - \(error)"
+                Logger.logError(
+                    category: .network,
+                    "Не удалось получить профайл",
+                    error: error
                 )
                 self.showNetworkErrorAlert()
             }
         }
     }
-}
-
-// MARK: - AuthViewControllerDelegate
-
-extension SplashViewController: AuthViewControllerDelegate {
-    func didAuthenticate(_ vc: AuthViewController) {
-        vc.dismiss(animated: true) { [weak self] in
-            guard let self else { return }
-
-            if let token = self.storage.token {
-                self.fetchProfile(token: token)
-            } else {
-                print(
-                    "[SplashViewController.didAuthenticate]: Ошибка - Токен не найден после авторизации"
-                )
-            }
-        }
-    }
-}
-
-extension SplashViewController {
     private func showNetworkErrorAlert() {
         let alert = UIAlertController(
             title: "Что-то пошло не так",
