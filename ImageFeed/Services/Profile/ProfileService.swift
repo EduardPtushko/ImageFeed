@@ -78,7 +78,7 @@ final class ProfileService {
     // MARK: - Private Methods
 
     private func makeProfileRequest(_ authToken: String) -> URLRequest? {
-        let urlString = "\(Constants.defaultBaseURLString)/me"
+        let urlString = "\(Constants.URL.defaultBaseURLString)/me"
         
         guard let url = URL(string: urlString)
         else {

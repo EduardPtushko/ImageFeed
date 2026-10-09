@@ -118,12 +118,12 @@ final class ProfileImageService {
     {
         guard
             let url = URL(
-                string: "\(Constants.defaultBaseURLString)/users/\(username)"
+                string: "\(Constants.URL.defaultBaseURLString)/users/\(username)"
             )
         else {
             Logger.logError(
                 category: .network,
-                "URLError - не удалось сформировать URL для строки: \(Constants.defaultBaseURLString)/users/\(username)"
+                "URLError - не удалось сформировать URL для строки: \(Constants.URL.defaultBaseURLString)/users/\(username)"
             )
             return nil
         }
