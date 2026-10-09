@@ -9,13 +9,18 @@ import Kingfisher
 import OSLog
 import UIKit
 
-final class ProfileViewController: UIViewController {
+protocol ProfileViewControllerProtocol: AnyObject {
+    var presenter: ProfileViewPresenterProtocol? { get set }
+    func showConfirmLogout()
+    func navigateToSplashView()
+    func updateAvatar(with url: URL?)
+    func updateProfileDetails(name: String, login: String, bio: String)
+}
 
-    // MARK: - Private Properties
-
-    private let profileService = ProfileService.shared
-    private let profileLogoutService = ProfileLogoutService.shared
-    private var profileImageServiceObserver: NSObjectProtocol?
+final class ProfileViewController: UIViewController
+        & ProfileViewControllerProtocol
+{
+    var presenter: (any ProfileViewPresenterProtocol)?
 
     // MARK: - UI Elements
 
@@ -85,27 +90,8 @@ final class ProfileViewController: UIViewController {
 
         setupUI()
         setupConstraints()
+        presenter?.viewDidLoad()
 
-        if let profile = profileService.profile {
-            updateProfileDetails(with: profile)
-        }
-
-        profileImageServiceObserver = NotificationCenter.default
-            .addObserver(
-                forName: ProfileImageService.didChangeNotification,
-                object: nil,
-                queue: .main
-            ) { [weak self] _ in
-                guard let self else { return }
-                self.updateAvatar()
-            }
-        updateAvatar()
-    }
-
-    deinit {
-        if let observer = profileImageServiceObserver {
-            NotificationCenter.default.removeObserver(observer)
-        }
     }
 
     // MARK: - Setup Methods
@@ -172,19 +158,14 @@ final class ProfileViewController: UIViewController {
     // MARK: - Actions
 
     @objc private func didTapLogoutButton() {
-        confirmLogout()
+        presenter?.didTapLogout()
     }
 }
 
-// MARK: - Private Methods
+// MARK: - Public Methods
 
 extension ProfileViewController {
-    private func updateAvatar() {
-        guard let profileImageURL = ProfileImageService.shared.avatarURL,
-            let url = URL(string: profileImageURL)
-        else {
-            return
-        }
+    func updateAvatar(with url: URL?) {
 
         let profileImagePlaceholder = UIImage(systemName: "person.circle.fill")?
             .withTintColor(.lightGray, renderingMode: .alwaysOriginal)
@@ -195,6 +176,11 @@ extension ProfileViewController {
                     scale: .large
                 )
             )
+
+        guard let url else {
+            avatarImageView.image = profileImagePlaceholder
+            return
+        }
 
         avatarImageView.kf.indicatorType = .activity
         avatarImageView.kf.setImage(
@@ -220,16 +206,33 @@ extension ProfileViewController {
         }
     }
 
-    private func updateProfileDetails(with profile: Profile) {
-        nameLabel.text = profile.name.isEmpty ? "Имя не указано" : profile.name
-        loginNameLabel.text =
-            profile.loginName.isEmpty
-            ? "@неизвестный пользователь" : profile.loginName
-        descriptionLabel.text =
-            (profile.bio?.isEmpty ?? true) ? "Профиль не заполнен" : profile.bio
+    func updateProfileDetails(name: String, login: String, bio: String) {
+        nameLabel.text = name
+        loginNameLabel.text = login
+        descriptionLabel.text = bio
     }
 
-    private func confirmLogout() {
+    func navigateToSplashView() {
+        let splashViewController = SplashViewController()
+
+        let keyWindow = UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .flatMap { $0.windows }
+            .first { $0.isKeyWindow }
+
+        if let window = keyWindow {
+            window.rootViewController = splashViewController
+            UIView.transition(
+                with: window,
+                duration: 0.3,
+                options: .transitionCrossDissolve,
+                animations: nil,
+                completion: nil
+            )
+        }
+    }
+
+    func showConfirmLogout() {
         let alert = UIAlertController(
             title: "Пока, пока!",
             message: "Уверены, что хотите выйти?",
@@ -241,25 +244,7 @@ extension ProfileViewController {
             [weak self] _ in
             guard let self else { return }
 
-            self.profileLogoutService.logout()
-
-            let splashViewController = SplashViewController()
-
-            let keyWindow = UIApplication.shared.connectedScenes
-                .compactMap { $0 as? UIWindowScene }
-                .flatMap { $0.windows }
-                .first { $0.isKeyWindow }
-
-            if let window = keyWindow {
-                window.rootViewController = splashViewController
-                UIView.transition(
-                    with: window,
-                    duration: 0.3,
-                    options: .transitionCrossDissolve,
-                    animations: nil,
-                    completion: nil
-                )
-            }
+            self.presenter?.didConfirmLogout()
         }
         let cancelAction = UIAlertAction(title: "Нет", style: .default)
 

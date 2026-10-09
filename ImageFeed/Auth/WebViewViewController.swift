@@ -56,17 +56,6 @@ final class WebViewViewController: UIViewController
 
     }
 
-    //    override func viewDidAppear(_ animated: Bool) {
-    //        super.viewDidAppear(animated)
-    //
-    ////        updateProgress()
-    //    }
-    //
-    //    override func viewWillDisappear(_ animated: Bool) {
-    //        super.viewWillDisappear(animated)
-    //
-    //    }
-
     func load(request: URLRequest) {
         webView.load(request)
     }
