@@ -20,6 +20,10 @@ final class TabBarController: UITabBarController {
         tabBar.barTintColor = UIColor(resource: .ypBlack)
 
         let imagesListViewController = ImagesListViewController()
+        let imagesListViewPresenter = ImagesListViewPresenter()
+        imagesListViewController.presenter = imagesListViewPresenter
+        imagesListViewPresenter.view = imagesListViewController
+        
         imagesListViewController.tabBarItem = UITabBarItem(
             title: "",
             image: UIImage(resource: .tabEditorialActive),

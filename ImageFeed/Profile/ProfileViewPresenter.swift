@@ -10,7 +10,7 @@ import Kingfisher
 import OSLog
 
 protocol ProfileViewPresenterProtocol: AnyObject {
-    var view: ProfileViewController? { get set }
+    var view: ProfileViewControllerProtocol? { get set }
     func viewDidLoad()
     func didTapLogout()
     func didConfirmLogout()
@@ -24,7 +24,7 @@ final class ProfileViewPresenter: ProfileViewPresenterProtocol {
     private let profileLogoutService = ProfileLogoutService.shared
     private var profileImageServiceObserver: NSObjectProtocol?
 
-    weak var view: ProfileViewController?
+    weak var view: ProfileViewControllerProtocol?
 
     func viewDidLoad() {
         if let profile = profileService.profile {

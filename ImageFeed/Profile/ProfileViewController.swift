@@ -59,7 +59,7 @@ final class ProfileViewController: UIViewController
     private lazy var nameLabel: UILabel = {
         let label = UILabel()
         label.translatesAutoresizingMaskIntoConstraints = false
-        label.text = "Екатерина Новикова"
+        label.text = ""
         label.textColor = .ypWhite
         label.font = UIFont.boldSystemFont(ofSize: 18)
         return label
@@ -68,7 +68,7 @@ final class ProfileViewController: UIViewController
     private lazy var loginNameLabel: UILabel = {
         let label = UILabel()
         label.translatesAutoresizingMaskIntoConstraints = false
-        label.text = "@ekaterina_nov"
+        label.text = ""
         label.textColor = .ypGrey
         label.font = UIFont.systemFont(ofSize: 13)
         return label
@@ -77,7 +77,7 @@ final class ProfileViewController: UIViewController
     private lazy var descriptionLabel: UILabel = {
         let label = UILabel()
         label.translatesAutoresizingMaskIntoConstraints = false
-        label.text = "Hello, World!"
+        label.text = ""
         label.textColor = .ypWhite
         label.font = UIFont.systemFont(ofSize: 13)
         return label
@@ -91,7 +91,6 @@ final class ProfileViewController: UIViewController
         setupUI()
         setupConstraints()
         presenter?.viewDidLoad()
-
     }
 
     // MARK: - Setup Methods
@@ -166,7 +165,6 @@ final class ProfileViewController: UIViewController
 
 extension ProfileViewController {
     func updateAvatar(with url: URL?) {
-
         let profileImagePlaceholder = UIImage(systemName: "person.circle.fill")?
             .withTintColor(.lightGray, renderingMode: .alwaysOriginal)
             .withConfiguration(
