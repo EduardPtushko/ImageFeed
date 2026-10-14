@@ -8,6 +8,10 @@
 import Foundation
 import OSLog
 
+protocol ProfileServiceProtocol: AnyObject {
+    var profile: Profile? { get }
+}
+
 final class ProfileService {
 
     static let shared = ProfileService()
@@ -31,7 +35,7 @@ final class ProfileService {
         task?.cancel()
         guard let request = makeProfileRequest(token) else {
             let urlError = URLError(.badURL)
-            
+
             Logger.logError(
                 category: .network,
                 "RequestCreationError - не удалось создать URLRequest",
@@ -58,7 +62,11 @@ final class ProfileService {
                 completion(.success(profile))
 
             case .failure(let error):
-                Logger.logError(category: .network, "NetworkError - Ошибка при получении профайла: ", error: error)
+                Logger.logError(
+                    category: .network,
+                    "NetworkError - Ошибка при получении профайла: ",
+                    error: error
+                )
                 completion(.failure(error))
             }
             self.task = nil
@@ -79,7 +87,7 @@ final class ProfileService {
 
     private func makeProfileRequest(_ authToken: String) -> URLRequest? {
         let urlString = "\(Constants.URL.defaultBaseURLString)/me"
-        
+
         guard let url = URL(string: urlString)
         else {
             Logger
@@ -101,3 +109,5 @@ final class ProfileService {
     }
 
 }
+
+extension ProfileService: ProfileServiceProtocol {}

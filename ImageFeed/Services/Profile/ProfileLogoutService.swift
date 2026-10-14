@@ -10,6 +10,10 @@ import Kingfisher
 import OSLog
 import WebKit
 
+protocol ProfileLogoutServiceProtocol: AnyObject {
+    func logout()
+}
+
 final class ProfileLogoutService {
     static let shared = ProfileLogoutService()
 
@@ -63,3 +67,5 @@ final class ProfileLogoutService {
     }
 
 }
+
+extension ProfileLogoutService: ProfileLogoutServiceProtocol {}

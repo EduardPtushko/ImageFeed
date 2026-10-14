@@ -9,13 +9,18 @@ import Kingfisher
 import SwiftUI
 import UIKit
 
+protocol ImagesListCellProtocol: AnyObject {
+    func configure(image: String, date: String, isLiked: Bool)
+    func setIsLiked(_ isLiked: Bool)
+}
+
 // MARK: - ImagesListCellDelegate
 
 protocol ImagesListCellDelegate: AnyObject {
     func imagesListCellDidTapLike(_ cell: ImagesListCell)
 }
 
-final class ImagesListCell: UITableViewCell {
+final class ImagesListCell: UITableViewCell & ImagesListCellProtocol {
 
     // MARK: - Public Properties
 
@@ -35,6 +40,7 @@ final class ImagesListCell: UITableViewCell {
     private lazy var likeButton: UIButton = {
         let button = UIButton()
         button.translatesAutoresizingMaskIntoConstraints = false
+        button.accessibilityIdentifier = "likeButton"
         button.addTarget(
             self,
             action: #selector(likeButtonTapped),

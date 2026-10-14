@@ -30,6 +30,7 @@ final class SingleImageViewController: UIViewController {
         let button = UIButton()
         let image = UIImage(resource: .navBackButtonWhite)
         button.setImage(image, for: .normal)
+        button.accessibilityIdentifier = "backButtonWhite"
         button.translatesAutoresizingMaskIntoConstraints = false
         button.addTarget(
             self,

@@ -48,6 +48,7 @@ final class ProfileViewController: UIViewController
         let button = UIButton()
         button.setImage(UIImage(resource: .logoutButton), for: .normal)
         button.translatesAutoresizingMaskIntoConstraints = false
+        button.accessibilityIdentifier = "logoutButton"
         button.addTarget(
             self,
             action: #selector(didTapLogoutButton),
@@ -156,7 +157,7 @@ final class ProfileViewController: UIViewController
 
     // MARK: - Actions
 
-    @objc private func didTapLogoutButton() {
+    @objc func didTapLogoutButton() {
         presenter?.didTapLogout()
     }
 }

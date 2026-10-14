@@ -6,7 +6,6 @@
 //
 
 import Foundation
-import Kingfisher
 import OSLog
 
 protocol ProfileViewPresenterProtocol: AnyObject {
@@ -20,11 +19,20 @@ final class ProfileViewPresenter: ProfileViewPresenterProtocol {
 
     // MARK: - Private Properties
 
-    private let profileService = ProfileService.shared
-    private let profileLogoutService = ProfileLogoutService.shared
+    private let profileService: ProfileServiceProtocol
+    private let profileLogoutService: ProfileLogoutServiceProtocol
     private var profileImageServiceObserver: NSObjectProtocol?
 
     weak var view: ProfileViewControllerProtocol?
+
+    init(
+        profileService: ProfileServiceProtocol = ProfileService.shared,
+        profileLogoutService: ProfileLogoutServiceProtocol =
+            ProfileLogoutService.shared
+    ) {
+        self.profileService = profileService
+        self.profileLogoutService = profileLogoutService
+    }
 
     func viewDidLoad() {
         if let profile = profileService.profile {
@@ -64,7 +72,7 @@ final class ProfileViewPresenter: ProfileViewPresenterProtocol {
     private func provideProfileDetails(_ profile: Profile) {
         let name = profile.name.isEmpty ? "Имя не указано" : profile.name
         let login =
-            profile.loginName.isEmpty
+            profile.username.isEmpty
             ? "@неизвестный пользователь" : profile.loginName
         let bio =
             (profile.bio?.isEmpty ?? true)

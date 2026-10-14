@@ -21,12 +21,9 @@ protocol ImagesListViewPresenterProtocol: AnyObject {
 }
 
 final class ImagesListViewPresenter: ImagesListViewPresenterProtocol {
-
     private let imagesListService = ImagesListService.shared
     private var imagesListServiceObserver: NSObjectProtocol?
     private var photos: [Photo] = []
-    
-    weak var view: (any ImagesListViewControllerProtocol)?
 
     private lazy var dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -34,6 +31,8 @@ final class ImagesListViewPresenter: ImagesListViewPresenterProtocol {
         formatter.timeStyle = .none
         return formatter
     }()
+
+    weak var view: (any ImagesListViewControllerProtocol)?
 
     func viewDidLoad() {
         fetchPhotos()
@@ -72,19 +71,22 @@ final class ImagesListViewPresenter: ImagesListViewPresenterProtocol {
     private func updateTableViewAnimated() {
         let oldCount = photos.count
         let newCount = imagesListService.photos.count
-        photos = imagesListService.photos
 
         if oldCount != newCount {
+            photos = imagesListService.photos
             Logger.network.info(
                 "Служба обновила массив фото. Было: \(oldCount), стало: \(newCount)"
             )
 
             let newIndices = IndexSet(oldCount..<newCount)
             view?.insertRows(at: newIndices)
+        } else {
+            photos = imagesListService.photos
         }
     }
 
     func configureCell(_ cell: any ImagesListCellProtocol, at index: Int) {
+        guard photos.indices.contains(index) else { return }
         let photo = photos[index]
         let dateString =
             photo.createdAt.map { dateFormatter.string(from: $0) } ?? ""
@@ -116,7 +118,7 @@ final class ImagesListViewPresenter: ImagesListViewPresenterProtocol {
             imageSize.height * scale + verticalPadding
         return cellHeight
     }
-    
+
     func willDisplayCell(indexRow: Int) {
         if indexRow + 1 == photos.count {
             fetchPhotos()
@@ -133,6 +135,7 @@ final class ImagesListViewPresenter: ImagesListViewPresenterProtocol {
     }
 
     func didTapCellLike(index: Int) {
+        guard photos.indices.contains(index) else { return }
         let photo = photos[index]
 
         view?.showProgressHUD()
@@ -142,10 +145,15 @@ final class ImagesListViewPresenter: ImagesListViewPresenterProtocol {
             guard let self else { return }
 
             view?.dismissProgressHUD()
-            
+
             switch result {
             case .success:
-                self.photos = self.imagesListService.photos
+                if self.imagesListService.photos.indices.contains(index) {
+
+                    self.photos[index] = self.imagesListService.photos[index]
+                } else {
+                    self.photos[index].isLiked.toggle()
+                }
                 self.view?.updateRow(at: index)
                 Logger.network.info(
                     "Состояние лайка успешно изменено для фото с ID: \(photo.id)"
