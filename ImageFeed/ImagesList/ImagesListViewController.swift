@@ -9,9 +9,20 @@ import Kingfisher
 import OSLog
 import UIKit
 
-final class ImagesListViewController: UIViewController {
+protocol ImagesListViewControllerProtocol: AnyObject {
+    var presenter: ImagesListViewPresenterProtocol? { get set }
+    func insertRows(at indices: IndexSet)
+    func showSingleViewImage(imageURLString: String)
+    func showProgressHUD()
+    func dismissProgressHUD()
+    func updateRow(at index: Int)
+}
 
-    private lazy var tableView: UITableView = {
+final class ImagesListViewController: UIViewController
+        & ImagesListViewControllerProtocol
+{
+
+    private(set) lazy var tableView: UITableView = {
         let tableView = UITableView()
         tableView.translatesAutoresizingMaskIntoConstraints = false
         tableView.backgroundColor = UIColor(resource: .ypBlack)
@@ -19,19 +30,9 @@ final class ImagesListViewController: UIViewController {
         return tableView
     }()
 
+    var presenter: ImagesListViewPresenterProtocol?
+
     // MARK: - Private Properties
-
-    private let imagesListService = ImagesListService.shared
-    private var imagesListServiceObserver: NSObjectProtocol?
-
-    private var photos: [Photo] = []
-
-    private lazy var dateFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .long
-        formatter.timeStyle = .none
-        return formatter
-    }()
 
     private func setupUI() {
         view.addSubview(tableView)
@@ -63,66 +64,55 @@ final class ImagesListViewController: UIViewController {
         setupUI()
         setupConstraints()
         setupTable()
+
         tableView.contentInset = UIEdgeInsets(
             top: 12,
             left: 0,
             bottom: 12,
             right: 0
         )
-
-        fetchPhotos()
-
-        imagesListServiceObserver = NotificationCenter.default.addObserver(
-            forName: ImagesListService.didChangeNotification,
-            object: nil,
-            queue: .main,
-            using: { [weak self] _ in
-                guard let self else { return }
-                updateTableViewAnimated()
-            }
-        )
+        presenter?.viewDidLoad()
     }
 
-    deinit {
-        if let imagesListServiceObserver {
-            NotificationCenter.default.removeObserver(imagesListServiceObserver)
-        }
-    }
 }
 
 // MARK: - Private Methods
 
 extension ImagesListViewController {
-    private func updateTableViewAnimated() {
-        let oldCount = photos.count
-        let newCount = imagesListService.photos.count
-        photos = imagesListService.photos
+    func insertRows(at indices: IndexSet) {
+        let indexPaths = indices.map { IndexPath(row: $0, section: 0) }
 
-        if oldCount != newCount {
-            Logger.network.info(
-                "Служба обновила массив фото. Было: \(oldCount), стало: \(newCount)"
-            )
-
-            tableView.performBatchUpdates {
-                let indexPaths = (oldCount..<newCount).map { i in
-                    IndexPath(row: i, section: 0)
-                }
-
-                tableView.insertRows(at: indexPaths, with: .automatic)
-            }
+        tableView.performBatchUpdates {
+            tableView.insertRows(at: indexPaths, with: .automatic)
         }
     }
 
-    private func fetchPhotos() {
-        Logger.network.info("Запрос следующей страницы с Unsplash")
+    func showSingleViewImage(imageURLString: String) {
+        let viewController = SingleImageViewController()
 
-        imagesListService.fetchPhotosNextPage { error in
-            if let error {
-                Logger.logError(
-                    category: .network,
-                    "Не удалось загрузить следующую страницу фотографий",
-                    error: error
-                )
+        viewController.imageUrl = imageURLString
+        viewController.modalPresentationStyle = .fullScreen
+
+        present(viewController, animated: true)
+    }
+
+    func showProgressHUD() {
+        UIBlockingProgressHUD.show()
+    }
+
+    func dismissProgressHUD() {
+        UIBlockingProgressHUD.dismiss()
+    }
+
+    func updateRow(at index: Int) {
+        let indexPath = IndexPath(row: index, section: 0)
+
+        if let cell = tableView.cellForRow(at: indexPath) as? ImagesListCell {
+            if let presenter {
+                let count = presenter.photosCount()
+                if index < count {
+                    presenter.configureCell(cell, at: indexPath.row)
+                }
             }
         }
     }
@@ -134,7 +124,7 @@ extension ImagesListViewController: UITableViewDataSource {
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int)
         -> Int
     {
-        photos.count
+        presenter?.photosCount() ?? 0
     }
 
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath)
@@ -148,18 +138,9 @@ extension ImagesListViewController: UITableViewDataSource {
         guard let imageListCell = cell as? ImagesListCell else {
             return UITableViewCell()
         }
+
         imageListCell.delegate = self
-
-        let photo = photos[indexPath.row]
-        let dateString =
-            photo.createdAt != nil
-            ? dateFormatter.string(from: photo.createdAt!) : ""
-
-        imageListCell.configure(
-            image: photo.thumbImageURL,
-            date: dateString,
-            isLiked: photo.isLiked
-        )
+        presenter?.configureCell(imageListCell, at: indexPath.row)
 
         return imageListCell
     }
@@ -172,32 +153,17 @@ extension ImagesListViewController: UITableViewDelegate {
         _ tableView: UITableView,
         didSelectRowAt indexPath: IndexPath
     ) {
-        let viewController = SingleImageViewController()
-        let photo = photos[indexPath.row]
-
-        viewController.imageUrl = photo.largeImageURL
-        viewController.modalPresentationStyle = .fullScreen
-
-        present(viewController, animated: true)
+        presenter?.didTapOnTableRow(at: indexPath.row)
     }
 
     func tableView(
         _ tableView: UITableView,
         heightForRowAt indexPath: IndexPath
     ) -> CGFloat {
-        let photo = photos[indexPath.row]
-        let imageSize = photo.size
-
-        guard imageSize.width > 0 else { return 0 }
-
-        let imageInsets = UIEdgeInsets(top: 4, left: 16, bottom: 4, right: 16)
-        let imageViewWidth =
-            tableView.bounds.width - imageInsets.left - imageInsets.right
-        let imageWidth = imageSize.width
-        let scale = imageViewWidth / imageWidth
-        let cellHeight =
-            imageSize.height * scale + imageInsets.top + imageInsets.bottom
-        return cellHeight
+        presenter?.calculateHeightForRow(
+            at: indexPath.row,
+            tableViewWidth: tableView.bounds.width
+        ) ?? 0
     }
 
     func tableView(
@@ -205,9 +171,7 @@ extension ImagesListViewController: UITableViewDelegate {
         willDisplay cell: UITableViewCell,
         forRowAt indexPath: IndexPath
     ) {
-        if indexPath.row + 1 == photos.count {
-            fetchPhotos()
-        }
+        presenter?.willDisplayCell(indexRow: indexPath.row)
     }
 }
 // MARK: - ImagesListCellDelegate
@@ -215,32 +179,7 @@ extension ImagesListViewController: UITableViewDelegate {
 extension ImagesListViewController: ImagesListCellDelegate {
     func imagesListCellDidTapLike(_ cell: ImagesListCell) {
         guard let indexPath = tableView.indexPath(for: cell) else { return }
-        let photo = photos[indexPath.row]
-
-        UIBlockingProgressHUD.show()
-
-        imagesListService.changeLike(photoId: photo.id, isLike: !photo.isLiked)
-        { [weak self] result in
-
-            guard let self else { return }
-
-            UIBlockingProgressHUD.dismiss()
-            switch result {
-            case .success:
-                self.photos = self.imagesListService.photos
-                cell.setIsLiked(self.photos[indexPath.row].isLiked)
-                Logger.network.info(
-                    "Состояние лайка успешно изменнено для фото с ID: \(photo.id)"
-                )
-            case .failure(let error):
-                Logger.logError(
-                    category: .network,
-                    "Не удалось изменить состояние лайка для фото с ID: \(photo.id)",
-                    error: error
-                )
-            }
-        }
-
+        presenter?.didTapCellLike(index: indexPath.row)
     }
 }
 

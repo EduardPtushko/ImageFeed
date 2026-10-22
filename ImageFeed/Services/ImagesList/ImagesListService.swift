@@ -14,7 +14,7 @@ final class ImagesListService {
 
     static let shared = ImagesListService()
     static let didChangeNotification = Notification.Name(
-        "ImageListServiceDidChange"
+        "ImagesListServiceDidChange"
     )
 
     // MARK: - Private Properties
